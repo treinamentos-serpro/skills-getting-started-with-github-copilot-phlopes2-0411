@@ -7,7 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Function to fetch activities from API
   async function fetchActivities() {
     try {
-      const response = await fetch("/activities");
+      const response = await fetch("/activities", { cache: "no-store" });
       const activities = await response.json();
 
       // Clear loading message
@@ -41,7 +41,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
           details.participants.forEach((email) => {
             const participant = document.createElement("li");
-            participant.textContent = email;
+            const participantEmail = document.createElement("span");
+            participantEmail.className = "participant-email";
+            participantEmail.textContent = email;
+            participant.appendChild(participantEmail);
+
+            const removeButton = document.createElement("button");
+            removeButton.type = "button";
+            removeButton.className = "participant-remove";
+            removeButton.title = `Cancelar inscricao de ${email}`;
+            removeButton.setAttribute("aria-label", `Cancelar inscricao de ${email} em ${name}`);
+
+            const removeIcon = document.createElement("img");
+            removeIcon.src = "/static/trash-2.svg";
+            removeIcon.alt = "";
+            removeIcon.width = 18;
+            removeIcon.height = 18;
+            removeButton.appendChild(removeIcon);
+
+            removeButton.addEventListener("click", async () => {
+              removeButton.disabled = true;
+              try {
+                const response = await fetch(
+                  `/activities/${encodeURIComponent(name)}/signup?email=${encodeURIComponent(email)}`,
+                  { method: "DELETE" }
+                );
+                const result = await response.json();
+                if (!response.ok) {
+                  throw new Error(result.detail || "Falha ao cancelar inscricao.");
+                }
+
+                messageDiv.textContent = result.message;
+                messageDiv.className = "success";
+                await fetchActivities();
+              } catch (error) {
+                messageDiv.textContent = error.message || "Falha ao cancelar inscricao.";
+                messageDiv.className = "error";
+              } finally {
+                removeButton.disabled = false;
+                messageDiv.classList.remove("hidden");
+              }
+            });
+
+            participant.appendChild(removeButton);
             participantsList.appendChild(participant);
           });
 
